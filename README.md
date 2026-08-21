@@ -1,215 +1,43 @@
-# HTTP Group Project — Networks & Communications 2
-**Universidad San Jorge · Zaragoza**
+# Raw HTTP/1.1 Protocol Engine 🚀
 
-Implementation of an HTTP/1.1 client and server from scratch using raw TCP sockets in Node.js.
+A full-featured HTTP/1.1 client and server engine built entirely from scratch using raw TCP sockets in Node.js. This project bypasses standard HTTP libraries to demonstrate a deep understanding of network protocols, byte stream parsing, and concurrent socket management.
 
----
+## 🧠 Technical Architecture
 
-## 📁 Project Structure
-- `/server` — TCP socket management, concurrency, HTTP request parsing
-- `/client` — HTTP client library and interactive CLI
-- `/premium` — TLS encryption and login authentication system
+The system is divided into three core modules, built on top of Node.js's native `net` module:
 
----
+### 1. The TCP Server (`/server`)
+A robust HTTP server capable of handling concurrent connections via pure TCP sockets.
+* **Dynamic Routing:** Custom implementation of an Express-like router with parameterized routes (e.g., `/dogs/:id`) supporting GET, POST, PUT, and DELETE methods.
+* **Stream Parsing:** Manages TCP buffering, extracts headers, and parses JSON payloads directly from the raw byte stream.
+* **Security & Auth:** Features a global native middleware requiring an `x-api-key` header, returning HTTP 401 Unauthorized for invalid requests.
 
-## 🚀 How to run
+### 2. The HTTP Client Library (`/client`)
+A custom-built HTTP client that manually constructs HTTP/1.1 packets.
+* **Packet Construction:** Automatically formats `Host`, `Content-Length`, and `Content-Type` headers, correctly appending carriage returns.
+* **Response Parsing:** Reads raw TCP chunks from the server, decodes the status line, and auto-formats the JSON body once the `Content-Length` is reached.
 
-```bash
-# Server
-node server/index.js --port 3000
+### 3. Interactive CLI 
+A persistent command-line interface that allows continuous HTTP requests without restarting the application, featuring guided prompts and automatic JSON pretty-printing.
 
-# Client
-node client/cli.js
-```
+## 🚀 Getting Started
 
----
+    # Start the Server on port 3000
+    node server/index.js --port 3000
 
-## 👥 Team
-- Pareja A (server) — TCP Motor: sockets, concurrency, HTTP parsing
-- Pareja B (client) — Client & CLI: HTTP messages, response handling
-- Pareja C (premium) — Premium features: TLS, login flow
+    # Start with Authentication Middleware enabled
+    node server/index.js --port 3000 --api-key [YOUR_KEY]
 
----
+    # Launch the Interactive CLI Client (in a new terminal)
+    node client/cli.js
 
-## 📅 Delivery
-- Report & repo deadline: **May 13, 2026**
-- Live demo: **May 18–20, 2026**
+## 👥 Team & Contributors
 
----
+This project was developed collaboratively, demonstrating strong teamwork, Git flow integration, and architectural delegation.
 
-## 🌿 Git Flow — Reglas del equipo
-
-### Ramas principales
-- `main` → código estable y funcional **siempre**. Nadie pushea aquí directamente.
-- `develop` → rama de integración. Se mergea a `main` solo al entregar.
-
-### Ramas de trabajo
-Cada pareja crea su rama desde `develop`:
-```
-feature/server
-feature/client
-feature/premium
-```
-
-### Cómo trabajar cada día
-```bash
-# 1. Antes de empezar, actualiza develop
-git checkout develop
-git pull origin develop
-
-# 2. Ve a tu rama
-git checkout feature/tu-area
-
-# 3. Trabaja, y cuando termines algo que funcione:
-git add .
-git commit -m "feat: descripción corta de lo que hiciste"
-git push origin feature/tu-area
-
-# 4. Cuando vuestra área esté lista, abrid un Pull Request a develop en GitHub
-```
-
-### Reglas de commits (obligatorias)
-Usar siempre este formato:
-```
-feat: añadir parseRequest al servidor
-fix: corregir parsing de headers con espacios
-chore: actualizar .gitignore
-docs: añadir sección de TLS al README
-test: añadir tests para endpoint GET /cats
-refactor: separar lógica de routing en fichero aparte
-```
-
-### Reglas de Pull Request
-- Mínimo **1 compañero** debe revisar antes de mergear a `develop`
-- No se mergea si hay conflictos sin resolver
-- El título del PR debe describir qué hace: `feat: TCP server con concurrencia`
-
-### ⚠️ Prohibido
-- Pushear directamente a `main` o `develop`
-- Commitear `node_modules/`
-- Commits con mensaje "cambios", "asdf" o similar (afecta a la nota)
-
----
-
-## 🔀 Flujo visual
-
-```
-main        ←────────────────── solo al entregar (13 mayo)
-  │
-develop     ←── PR revisado ←── feature/server
-                               feature/client
-                               feature/premium
-```
-
----
-
-## ⚙️ Setup inicial (cada miembro del equipo)
-
-```bash
-# 1. Clonar el repo
-git clone https://github.com/TU_USUARIO/NOMBRE_REPO.git
-cd NOMBRE_REPO
-
-# 2. Configurar identidad
-git config --global user.name "Tu Nombre"
-git config --global user.email "tu@email.com"
-
-# 3. Situarse en develop y crear tu rama
-git checkout develop
-git checkout -b feature/tu-area
-```
-
-
-# Avances en el Servidor HTTP/1.1
-
-Esta sección documenta el progreso en la implementación del servidor HTTP/1.1 desde cero, usando sockets TCP puros en Node.js.
-
-## Funcionalidades Implementadas
-
-### Routing Dinámico
-- Sistema de rutas con parámetros dinámicos (ej. `/dogs/:id`)
-- Soporte para métodos GET, POST, PUT, DELETE
-- Función `matchRoute()` que compara segmentos de ruta y extrae parámetros
-
-### API RESTful para Perros
-- `GET /dogs` — Lista todos los perros
-- `GET /dogs/:id` — Obtiene un perro específico
-- `POST /dogs` — Crea un nuevo perro (JSON en body)
-- `PUT /dogs/:id` — Actualiza un perro existente
-- `DELETE /dogs/:id` — Elimina un perro
-- `GET /index.html` - Devuelve un archivo html
-
-### 🛡️ Seguridad (Auth API Key)
-- Middleware global nativo que protege todas las rutas del servidor.
-- Autenticación rápida inyectable desde consola usando el argumento `--api-key [tu_clave]`.
-- Exige obligatoriamente la cabecera HTTP `x-api-key` a los clientes, escupiendo respuestas HTTP `401 Unauthorized` ante infracciones.
-
-### Tests con Bruno
-- Colección completa de pruebas HTTP en `server/bruno/httpGroup/`
-- Tests para todos los endpoints CRUD
-- Configurados para `http://localhost:3000`
-
-### Contenido Estático
-- Archivo `public/index.html` listo para servir
-- Página HTML básica con información del proyecto
-
-## Estado Actual
-- Servidor TCP funcional con buffering y concurrencia
-- Parser HTTP básico
-- Router con CRUD completo en memoria
-- Respuestas HTTP con códigos estándar (200, 201, 204, 400, 404)
-
-# Avances en el Cliente HTTP/1.1
-
-Esta sección documenta el progreso en la implementación del cliente HTTP/1.1 desde cero, usando sockets TCP puros en Node.js.
-
-## Funcionalidades Implementadas
-
-### Librería cliente (`http-client.js`)
-- `parseUrl(url)` — descompone la URL en host, puerto y path
-- `buildRequest(method, path, host, headers, body)` — construye el mensaje HTTP/1.1 completo con `\r\n` correctos, headers automáticos (`Host`, `Content-Type`, `Content-Length`) y body serializado
-- `parseResponse(raw)` — extrae status code, status text, headers y body de la respuesta raw
-- `request({ method, url, headers, body })` — función principal: abre el socket TCP, envía la petición, acumula chunks y resuelve la promesa cuando `Content-Length` está completo
-
-### CLI interactivo (`cli.js`)
-- Bucle infinito de peticiones sin necesidad de reiniciar el programa
-- Entrada guiada por prompts: URL, método, headers extra y body JSON
-- Separador visual `NEXT REQUEST` entre peticiones sucesivas
-- Formateador de respuesta con status, headers y body (pretty-print JSON automático)
-- Salida limpia escribiendo `exit` en el campo URL
-
-### Pruebas realizadas
-- `GET /dogs` → 200 OK con array completo 
-- `GET /dogs/:id` → 200 OK con recurso individual 
-- `POST /dogs` → 201 Created con id asignado 
-- `PUT /dogs/:id` → 200 OK con recurso actualizado 
-- `DELETE /dogs/:id` → 204 No Content 
-- `GET /dogs/999` → 404 Not Found 
-
-## Estado Actual
-- Librería cliente funcional sobre TCP raw (solo módulo `net` de Node.js)
-- CLI interactivo completo con todas las funcionalidades obligatorias
-- Compatible con el servidor del equipo y con servidores externos reales (`http://`)
-
-# Avances en premium:
-
-- Infraestructura para TLS (solo infraestructura, sin implementar en el servidor /server)
-- Unit test automático, tanto para premium como para server
-
----
-
-## 🏆 Project Achievement Breakdown (6 members)
-
-| Feature | Status | Points |
-| :--- | :---: | :---: |
-| Mandatory Features (REST, Client, etc.) | ✅ Done | +5.0 |
-| Authentication (Login Flow) | ✅ Done | +1.8 |
-| Multimedia Messages (MIME) | ✅ Done | +1.0 |
-| TLS Encryption (Basic) | ✅ Done | +1.0 |
-| Automated Testing (Jest) | ✅ Done | +1.0 |
-| Client GUI | ✅ Done | +1.0 |
-| Advanced HTTP/1.1 (Chunked, Keep-Alive) | ✅ Done | +1.0 |
-| API Key Middleware | ✅ Done | +0.5 |
-| Server Logging System | ✅ Done | +0.5 |
-| Cookie Management | ✅ Done | +0.5 |
-| **Total Accumulated Points** | | **13.3 / 10.0** |
+* **Zintradev** - https://github.com/Zintradev
+* **javier** - https://github.com/javier-hernaez
+* **Juan Iznardo** - https://github.com/JuanIzn
+* **nicolasbecas** - https://github.com/NicolasBecasAzagra
+* **YeryCintru** - https://github.com/YeryCintru
+* **alexrecasens18** - https://github.com/alexrecasens18
