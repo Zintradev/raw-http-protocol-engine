@@ -9,9 +9,9 @@ const PROXY_PORT = 4000;
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
-    let raw = '';
-    req.on('data',  (chunk) => { raw += chunk.toString(); });
-    req.on('end',   ()      => { resolve(raw); });
+    const chunks = [];
+    req.on('data',  (chunk) => { chunks.push(chunk); });
+    req.on('end',   ()      => { resolve(Buffer.concat(chunks).toString('utf8')); });
     req.on('error', (err)   => { reject(err); });
   });
 }
@@ -39,7 +39,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // read the JSON payload from the request body, which should contain { method, url, headers, body }
   let payload;
   try {
     const raw = await readBody(req);
@@ -50,7 +49,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // use the http-client's request function to perform the actual HTTP request 
   try {
     const result = await request({
       method:  payload.method  || 'GET',
@@ -60,7 +58,7 @@ const server = http.createServer(async (req, res) => {
     });
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(result));  // return the full response (statusCode, statusText, headers, body) back to gui.html
+    res.end(JSON.stringify(result));  
 
   } catch (err) {
     res.writeHead(502, { 'Content-Type': 'application/json' });

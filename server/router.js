@@ -1,4 +1,4 @@
-const { buildResponse, buildJSONResponse, build404NotFound, build400BadRequest } = require('./http_response');
+const { buildResponse, buildJSONResponse, build404NotFound, build400BadRequest, build405MethodNotAllowed } = require('./http_response');
 const fs = require('fs');
 const path = require('path');
 
@@ -15,39 +15,29 @@ const mimeTypes = {
 
 const routes = {
     'GET': {},
-    'POST': {}
+    'POST': {},
+    'PUT': {},
+    'DELETE': {}
 };
 
 let globalApiKey = null;
 
-/**
- * Registers a handler for a given HTTP method and path.
- */
 function registerRoute(method, path, handler) {
     if (!routes[method]) routes[method] = {};
     routes[method][path] = handler;
 }
 
-/**
- * Sets the global API key from index.js.
- */
 function setApiKey(key) {
     globalApiKey = key;
 }
 
-/**
- * Matches the request method+path against registered routes.
- * Supports exact and dynamic (parameterized) matching.
- */
 function matchRoute(method, path) {
     if (!routes[method]) return null;
 
-    // Exact match
     if (routes[method][path]) {
         return { handler: routes[method][path], params: {} };
     }
 
-    // Dynamic match: compare path segments and extract named params
     const requestSegments = path.split('/').filter(Boolean);
 
     for (const routePath of Object.keys(routes[method])) {
@@ -62,7 +52,6 @@ function matchRoute(method, path) {
             const requestSegment = requestSegments[i];
 
             if (routeSegment.startsWith(':')) {
-                // Capture named param value, e.g. /resource/:id
                 const paramName = routeSegment.slice(1);
                 params[paramName] = requestSegment;
             } else if (routeSegment !== requestSegment) {
@@ -79,23 +68,15 @@ function matchRoute(method, path) {
     return null;
 }
 
-/**
- * Main request handler: matches the request to a route and returns the response.
- * Falls back to static file serving, then 404.
- * @param {*} req
- * @returns
- */
 async function handleRequest(req) {
     const { method, path: reqPath } = req;
 
     console.log(`[Router] ${method} ${reqPath}`);
 
-    // Global middleware: check for body parse errors (e.g. malformed JSON)
     if (req.bodyError) {
         return build400BadRequest(req.bodyError);
     }
 
-    // Global middleware: validate API key if the server requires authentication
     if (globalApiKey) {
         if (req.headers['x-api-key'] !== globalApiKey) {
             console.log(`[Router] Blocked: missing or invalid API key.`);
@@ -121,13 +102,14 @@ async function handleRequest(req) {
         return build405MethodNotAllowed(`El método ${method} no está permitido en esta ruta`);
     }
 
-    // If not an API route, try to serve a static file
     if (method === 'GET') {
-        // Default to index.html for /web
+        const publicDir = path.resolve(__dirname, '..', 'public');
         const safePath = reqPath === '/web' ? '/index.html' : reqPath;
-        // Normalize to prevent directory traversal attacks (e.g. ../../etc/passwd)
-        const normalizedPath = path.normalize(safePath).replace(/^(\.\.(\/|\\|$))+/, '');
-        const filePath = path.join(__dirname, '..', 'public', normalizedPath);
+        const filePath = path.join(publicDir, safePath);
+
+        if (!filePath.startsWith(publicDir)) {
+            return build404NotFound('Acceso denegado a rutas seguras del sistema');
+        }
 
         try {
             const stat = await fs.promises.stat(filePath);
@@ -135,7 +117,6 @@ async function handleRequest(req) {
                 const extname = path.extname(filePath).toLowerCase();
                 const contentType = mimeTypes[extname] || 'application/octet-stream';
                 
-                // Read as async Buffer to support binary files natively
                 const fileContents = await fs.promises.readFile(filePath);
                 
                 return buildResponse({
@@ -150,7 +131,6 @@ async function handleRequest(req) {
         }
     }
 
-    // Route not found and not a static file: return 404
     return build404NotFound('Ruta no encontrada en el servidor');
 }
 
@@ -190,8 +170,6 @@ registerRoute('GET', '/test-cookie', (req) => {
     });
 });
 
-
-
 // ==========================================
 // In-memory data store (Dogs CRUD)
 // ==========================================
@@ -202,7 +180,6 @@ let dogs = [
 let nextDogId = 3;
 
 registerRoute('GET', '/dogs', (req) => {
-    // List all resources
     return buildJSONResponse(200, 'OK', dogs);
 });
 
@@ -261,7 +238,6 @@ registerRoute('POST', '/dogs', (req) => {
     }
     const newDog = req.body;
 
-    // Assign next available id and store
     newDog.id = nextDogId++;
     dogs.push(newDog);
 

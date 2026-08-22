@@ -20,27 +20,24 @@ function handleSocket(socket) {
   activeSockets.add(socket);
   console.log(`[+] New client connected. Total clients: ${activeSockets.size}`);
 
-  // Destroy idle sockets after 10 s
   socket.setTimeout(10000);
   socket.on("timeout", () => {
     console.log(`[!] Timeout reached. Destroying idle socket...`);
     socket.destroy();
   });
 
-  // Buffer to accumulate TCP chunks (supports binary / image bodies)
   let buffer = Buffer.alloc(0);
 
   socket.on("data", async (chunk) => {
     buffer = Buffer.concat([buffer, chunk]);
 
-    // Pipelining loop
     while (true) {
       const headerEnd = buffer.indexOf("\r\n\r\n");
       if (headerEnd === -1) break;
 
       const headerString = buffer.subarray(0, headerEnd).toString("utf8");
 
-      let requestSize = headerEnd + 4; // Tamaño base (cabeceras + \r\n\r\n)
+      let requestSize = headerEnd + 4; 
 
       const clMatch = headerString.match(/content-length:\s*(\d+)/i);
       const isChunked = /transfer-encoding:\s*chunked/i.test(headerString);
@@ -48,20 +45,21 @@ function handleSocket(socket) {
       if (clMatch) {
         requestSize += parseInt(clMatch[1], 10);
       } else if (isChunked) {
-        // Buscamos el terminador de chunked: "0\r\n\r\n"
+        // LIMITACIÓN CONOCIDA TÉCNICA: 
+        // Estamos buscando la secuencia literal "0\r\n\r\n" para marcar el final. 
+        // Si se recibe un archivo binario puro que, por casualidad estadística, 
+        // contenga esta secuencia exacta de 5 bytes en medio del payload, 
+        // la transferencia se cortará erróneamente en ese punto.
         const chunkedEnd = buffer.indexOf("0\r\n\r\n", headerEnd + 4);
         if (chunkedEnd === -1) {
           console.log(`[~] Esperando el final del chunked body...`);
           break;
         }
-        requestSize = chunkedEnd + 5; // Incluye los 5 bytes de "0\r\n\r\n"
+        requestSize = chunkedEnd + 5; 
       }
 
-      // Wait until the full request (headers + body) is buffered
       if (buffer.length < requestSize) {
-        console.log(
-          `[~] Incomplete request buffered. Waiting for more data...`,
-        );
+        console.log(`[~] Incomplete request buffered. Waiting for more data...`);
         break;
       }
 
@@ -69,7 +67,6 @@ function handleSocket(socket) {
       buffer = buffer.subarray(requestSize);
 
       try {
-        // IMPORTANTE: Pasamos 'binary' en lugar de 'utf8' para no destruir imágenes
         const reqObj = parseRequest(fullRequestBuffer.toString("binary"));
         const resString = await handleRequest(reqObj);
 
@@ -85,9 +82,7 @@ function handleSocket(socket) {
 
   socket.on("error", (err) => {
     if (err.code === "ECONNRESET") {
-      console.log(
-        `[!] Ignoring network error: client closed the connection abruptly.`,
-      );
+      console.log(`[!] Ignoring network error: client closed the connection abruptly.`);
     } else {
       console.error("[TCP Critical Error]:", err.message);
     }
@@ -96,9 +91,7 @@ function handleSocket(socket) {
   const cleanUp = () => {
     if (activeSockets.has(socket)) {
       activeSockets.delete(socket);
-      console.log(
-        `[-] Client disconnected. Total clients: ${activeSockets.size}`,
-      );
+      console.log(`[-] Client disconnected. Total clients: ${activeSockets.size}`);
     }
   };
 
@@ -106,11 +99,6 @@ function handleSocket(socket) {
   socket.on("close", cleanUp);
 }
 
-/**
- * Starts the TCP server. Pass a tlsStack (from setupTlsStack) to enable HTTPS.
- * @param {number} port
- * @param {object|null} tlsStack
- */
 function startServer(port, tlsStack = null) {
   const protocol = tlsStack ? "HTTPS (TLS)" : "HTTP";
 
