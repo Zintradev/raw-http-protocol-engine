@@ -45,7 +45,7 @@ function printResponse(res) {
 
 async function main() {
   console.log('╔══════════════════════════════════════╗');
-  console.log('║       HTTP/1.1 Client — USJ          ║');
+  console.log('║             HTTP/1.1 Client          ║');
   console.log('║  Write "exit" in the URL to quit     ║');
   console.log('╚══════════════════════════════════════╝\n');
 
